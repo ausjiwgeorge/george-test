@@ -41,7 +41,10 @@ CONF   = "Confidential  ·  Prepared for the CFO"
 
 
 # ---------- helpers ----------
+_PAGE = {"n": 0}   # auto slide counter (keeps footer numbers correct after inserts)
+
 def add_slide():
+    _PAGE["n"] += 1
     return prs.slides.add_slide(BLANK)
 
 def rect(slide, x, y, w, h, fill, line=None, line_w=1.0):
@@ -76,7 +79,8 @@ def notes(slide, text):
 def bg(slide, color=BGTINT):
     rect(slide, 0, 0, SW, SH, color)
 
-def footer(slide, idx):
+def footer(slide, idx=None):
+    idx = _PAGE["n"] if idx is None else idx
     rect(slide, Inches(0.6), Inches(7.02), Inches(12.13), Pt(0.75), LINE)
     txt(slide, Inches(0.6), Inches(7.08), Inches(5.0), Inches(0.32),
         [[(FOOTER, 9, SLATE, False)]])
@@ -85,14 +89,14 @@ def footer(slide, idx):
     txt(slide, Inches(11.4), Inches(7.08), Inches(1.33), Inches(0.32),
         [[(f"{idx:02d}", 9, SLATE, True)]], align=PP_ALIGN.RIGHT)
 
-def header(slide, kicker, title, idx):
+def header(slide, kicker, title, idx=None):
     rect(slide, 0, 0, SW, Inches(1.12), NAVY)
     rect(slide, 0, Inches(1.12), SW, Pt(2.5), GOLD)
     txt(slide, Inches(0.6), Inches(0.16), Inches(11.8), Inches(0.3),
         [[(kicker.upper(), 11, GOLD, True)]])
     txt(slide, Inches(0.6), Inches(0.44), Inches(12.1), Inches(0.62),
         [[(title, 25, WHITE, False)]], anchor=MSO_ANCHOR.MIDDLE, font=TITLE_FONT)
-    footer(slide, idx)
+    footer(slide)
 
 def bullets(slide, x, y, w, h, items, size=15, gap=8):
     tb = slide.shapes.add_textbox(x, y, w, h)
@@ -134,6 +138,127 @@ def styled_table(slide, rows, x, y, w, h, col_w, head_fill=NAVY, zebra=True,
     return t
 
 
+def oval(slide, x, y, d, fill, line=None):
+    sp = slide.shapes.add_shape(MSO_SHAPE.OVAL, x, y, d, d)
+    sp.fill.solid(); sp.fill.fore_color.rgb = fill
+    if line is None:
+        sp.line.color.rgb = WHITE; sp.line.width = Pt(2)
+    else:
+        sp.line.color.rgb = line; sp.line.width = Pt(1)
+    sp.shadow.inherit = False
+    return sp
+
+def arrow(slide, x, y, w, h, fill):
+    sp = slide.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW, x, y, w, h)
+    sp.fill.solid(); sp.fill.fore_color.rgb = fill
+    sp.line.fill.background(); sp.shadow.inherit = False
+    return sp
+
+
+# ---------- reusable slide builders (used by full deck AND 2-slide file) ----------
+AGENDA_ITEMS = [
+    ("Diagnosis", "Where we stand and why"),
+    ("Guiding Principles", "How I will work"),
+    ("Vision", "Reporting factory → business partner"),
+    ("Priorities", "What comes first, and why"),
+    ("Roadmap", "Four phases to delivery"),
+    ("Intelligent Shared Platform", "Layered target architecture"),
+    ("Case A — One Version of Truth", "Aligning Net Sales across entities"),
+    ("Case B — Mapping & Split Pipeline", "Dirty data in, clean table out"),
+    ("Real-time Reporting", "Achieving 'right-time' information"),
+    ("Delivery under Constraints", "Budget, IT and Group alignment"),
+    ("Staying Ahead", "Keeping up as the role evolves"),
+    ("First 90 Days & The Ask", "Commitment and next step"),
+]
+
+def build_agenda(s):
+    bg(s)
+    header(s, "Agenda", "What I will cover")
+    n = len(AGENDA_ITEMS)
+    half = (n + 1) // 2
+    col_x = [Inches(0.7), Inches(6.85)]
+    row_h = Inches(0.82); y0 = Inches(1.55)
+    for i, (title, sub) in enumerate(AGENDA_ITEMS):
+        col = 0 if i < half else 1
+        row = i if i < half else i - half
+        x = col_x[col]; y = y0 + row_h * row
+        rect(s, x, y, Inches(0.62), Inches(0.62), NAVY)
+        txt(s, x, y + Inches(0.07), Inches(0.62), Inches(0.5),
+            [[(f"{i+1:02d}", 15, WHITE, True)]], align=PP_ALIGN.CENTER)
+        txt(s, x + Inches(0.8), y + Inches(0.02), Inches(4.9), Inches(0.4),
+            [[(title, 14.5, NAVY, True)]])
+        txt(s, x + Inches(0.8), y + Inches(0.37), Inches(4.9), Inches(0.35),
+            [[(sub, 11, SLATE, False)]])
+    notes(s, "Here is the flow for the next 12 minutes. I start with how I read the situation and my principles, "
+             "move to the vision, priorities and the delivery roadmap, then show two concrete cases — aligning "
+             "Net Sales and the mapping pipeline — and close with real-time reporting, how I deliver under our "
+             "constraints, how I keep up, and my 90-day commitment and single ask.")
+
+
+def build_roadmap_visual(s):
+    bg(s)
+    header(s, "5 · Roadmap", "Stabilize → Standardize → Automate → Elevate")
+    phases = [
+        ("Phase 0 · Assess", "~30 days",
+         "Map process · inventory reports/licenses · lock core KPIs",
+         "Assessment + quick-win list", SLATE),
+        ("Phase 1 · Stabilize", "1–3 months",
+         "KPI dictionary + entity sign-off · Power Query auto-consolidation",
+         "First report: Day 4 → Day 2", STEEL),
+        ("Phase 2 · Standardize", "3–6 months",
+         "Central data model · local→Group mapping · master-data governance",
+         "Single source of truth + drill-down", NAVY),
+        ("Phase 3 · Automate", "6–12 months",
+         "End-to-end automation · near-real-time · integrate plan & forecast",
+         "First report → Day 1 / near-real-time", TEAL),
+        ("Phase 4 · Elevate", "12 months +",
+         "Rolling forecast · driver models · scenarios · anomaly alerts",
+         "Forward-looking + predictive analytics", GOLD),
+    ]
+    centers = [Inches(1.55), Inches(4.05), Inches(6.55), Inches(9.05), Inches(11.55)]
+    line_y = Inches(3.92)
+    # directional track
+    arrow(s, Inches(0.85), line_y, Inches(11.6), Inches(0.34), LINE)
+    txt(s, Inches(0.85), line_y + Inches(0.02), Inches(2.2), Inches(0.3),
+        [[("MATURITY  ➜", 9, SLATE, True)]])
+    cw = Inches(2.42); half = Inches(1.21)
+    for i, (name, dur, action, ms, col) in enumerate(phases):
+        cx = centers[i]
+        above = (i % 2 == 0)
+        card_y = Inches(1.5) if above else Inches(4.55)
+        # connector
+        if above:
+            rect(s, cx - Pt(1.5), Inches(3.1), Pt(3), Inches(0.9), col)
+        else:
+            rect(s, cx - Pt(1.5), line_y + Inches(0.34), Pt(3), Inches(0.35), col)
+        # node
+        oval(s, cx - Inches(0.28), line_y - Inches(0.11), Inches(0.56), col)
+        txt(s, cx - Inches(0.28), line_y - Inches(0.05), Inches(0.56), Inches(0.4),
+            [[(str(i), 16, WHITE, True)]], align=PP_ALIGN.CENTER)
+        # card
+        cardx = cx - half
+        rect(s, cardx, card_y, cw, Inches(0.62), col)
+        txt(s, cardx + Inches(0.12), card_y + Inches(0.05), cw - Inches(0.24), Inches(0.3),
+            [[(name, 12, WHITE, True)]])
+        txt(s, cardx + Inches(0.12), card_y + Inches(0.33), cw - Inches(0.24), Inches(0.25),
+            [[(dur, 10, RGBColor(0xE8,0xEE,0xF4), True)]])
+        rect(s, cardx, card_y + Inches(0.62), cw, Inches(1.02), WHITE, line=LINE)
+        txt(s, cardx + Inches(0.12), card_y + Inches(0.68), cw - Inches(0.24), Inches(0.6),
+            [[(action, 9.5, INK, False)]], line_spacing=1.02)
+        rect(s, cardx, card_y + Inches(1.64), cw, Pt(2), col)
+        txt(s, cardx + Inches(0.12), card_y + Inches(1.34), cw - Inches(0.24), Inches(0.3),
+            [[("◆ " + ms, 9.5, col, True)]], line_spacing=1.0)
+    # single-thread strip
+    rect(s, Inches(0.7), Inches(6.32), Inches(12.0), Inches(0.5), NAVY)
+    txt(s, Inches(0.9), Inches(6.4), Inches(11.6), Inches(0.35),
+        [[("Single thread — time to first report:   ", 12, GOLD, True),
+          ("Day 4  →  Day 2  →  Day 1  →  near-real-time", 12, WHITE, True)]],
+        anchor=MSO_ANCHOR.MIDDLE)
+    notes(s, "Same roadmap, shown as a timeline. Five phases along an arrow of increasing maturity, each with its "
+             "key action and a milestone. Follow the blue strip at the bottom — the single thread I manage is "
+             "'time to first report': Day 4 to Day 2 to Day 1 to near-real-time. Every phase delivers a visible result.")
+
+
 # =====================================================================
 # 1) Title
 # =====================================================================
@@ -157,7 +282,12 @@ txt(s, Inches(0.95), Inches(6.55), Inches(11.6), Inches(0.4),
 notes(s, "Opening: Thank you for the opportunity. In the next 12 minutes I will cover three things — how I read the situation, what I would do first, and a low-cost roadmap that stays aligned with Group. My goal in one sentence: free Finance from producing reports so it can help you make decisions.")
 
 # =====================================================================
-# 2) Diagnosis
+# 2) Agenda
+# =====================================================================
+build_agenda(add_slide())
+
+# =====================================================================
+# 3) Diagnosis
 # =====================================================================
 s = add_slide(); bg(s)
 header(s, "1 · Diagnosis", "The issue is not effort — it is the lack of a platform and standards", 2)
@@ -250,21 +380,9 @@ bullets(s, Inches(0.7), Inches(1.6), Inches(12), Inches(5), items, size=16, gap=
 notes(s, "The sequencing logic: I order by value, speed to impact, and low dependency. The first move is aligning definitions because it costs nothing yet underpins everything; the second is automating the existing Excel so you see reports get faster within 90 days. Fix 'fast and reliable' first, then move to 'forward-looking'.")
 
 # =====================================================================
-# 6) Roadmap
+# 7) Roadmap (visual timeline)
 # =====================================================================
-s = add_slide(); bg(s)
-header(s, "5 · Roadmap", "Stabilize → Standardize → Automate → Elevate (four phases)", 6)
-rows = [
-    ("Phase", "Key actions", "Deliverable / milestone"),
-    ("0 · Assess (~30 d)", "Map the process; inventory reports & licenses; lock core KPIs", "Assessment + quick-win list"),
-    ("1 · Stabilize (1–3 m)", "KPI data dictionary + entity sign-off; Power Query auto-consolidation", "First report: Day 4 → Day 2"),
-    ("2 · Standardize (3–6 m)", "Central data model; local→Group account mapping; master-data governance", "Single source of truth + drill-down"),
-    ("3 · Automate (6–12 m)", "End-to-end automation; daily/near-real-time; integrate plan & forecast", "First report → Day 1 / near-real-time"),
-    ("4 · Elevate (12 m +)", "Rolling forecast, driver-based models, scenarios, anomaly alerts", "Forward-looking + predictive analytics"),
-]
-styled_table(s, rows, Inches(0.6), Inches(1.5), Inches(12.13), Inches(4.9),
-             [Inches(2.55), Inches(6.0), Inches(3.58)], head_sz=13.5, body_sz=12)
-notes(s, "This is the backbone of the proposal. Four phases, each with a measurable milestone — watch the single thread 'time to first report': Day 4 to Day 2 to Day 1 to near-real-time. I will not rip and replace; each phase delivers a visible result.")
+build_roadmap_visual(add_slide())
 
 # =====================================================================
 # 7) Platform
@@ -465,3 +583,16 @@ notes(s, "Closing: nail the message one more time — free Finance from reports 
 prs.save("CFO_Finance_Controlling_Transformation_EN.pptx")
 print("Saved: CFO_Finance_Controlling_Transformation_EN.pptx  |  slides:",
       len(prs.slides._sldIdLst))
+
+# ---------------------------------------------------------------------
+# Also emit a standalone 2-slide file: Agenda + visual Roadmap
+# ---------------------------------------------------------------------
+prs2 = Presentation()
+prs2.slide_width = Inches(13.333); prs2.slide_height = Inches(7.5)
+blank2 = prs2.slide_layouts[6]
+_PAGE["n"] = 1
+build_agenda(prs2.slides.add_slide(blank2))
+_PAGE["n"] = 2
+build_roadmap_visual(prs2.slides.add_slide(blank2))
+prs2.save("CFO_Agenda_and_Roadmap_EN.pptx")
+print("Saved: CFO_Agenda_and_Roadmap_EN.pptx  |  slides:", len(prs2.slides._sldIdLst))
