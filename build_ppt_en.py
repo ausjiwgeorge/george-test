@@ -154,6 +154,22 @@ def arrow(slide, x, y, w, h, fill):
     sp.line.fill.background(); sp.shadow.inherit = False
     return sp
 
+def shape(slide, kind, x, y, w, h, fill, line=None, line_w=1.0):
+    sp = slide.shapes.add_shape(kind, x, y, w, h)
+    if fill is None:
+        sp.fill.background()
+    else:
+        sp.fill.solid(); sp.fill.fore_color.rgb = fill
+    if line is None:
+        sp.line.fill.background()
+    else:
+        sp.line.color.rgb = line; sp.line.width = Pt(line_w)
+    sp.shadow.inherit = False
+    return sp
+
+def rrect(slide, x, y, w, h, fill, line=None):
+    return shape(slide, MSO_SHAPE.ROUNDED_RECTANGLE, x, y, w, h, fill, line)
+
 
 # ---------- reusable slide builders (used by full deck AND 2-slide file) ----------
 AGENDA_ITEMS = [
@@ -168,6 +184,7 @@ AGENDA_ITEMS = [
     ("Real-time Reporting", "Achieving 'right-time' information"),
     ("Delivery under Constraints", "Budget, IT and Group alignment"),
     ("Staying Ahead", "Keeping up as the role evolves"),
+    ("Future Vision — AI-run Finance", "AI executes; people manage & create"),
     ("First 90 Days & The Ask", "Commitment and next step"),
 ]
 
@@ -257,6 +274,91 @@ def build_roadmap_visual(s):
     notes(s, "Same roadmap, shown as a timeline. Five phases along an arrow of increasing maturity, each with its "
              "key action and a milestone. Follow the blue strip at the bottom — the single thread I manage is "
              "'time to first report': Day 4 to Day 2 to Day 1 to near-real-time. Every phase delivers a visible result.")
+
+
+def build_future_vision(s):
+    from pptx.enum.shapes import MSO_SHAPE as _MS
+    bg(s)
+    header(s, "12 · Future Vision", "AI runs the routine — people manage it and create")
+
+    # ---- PEOPLE layer (top) ----
+    rrect(s, Inches(0.7), Inches(1.32), Inches(11.93), Inches(1.34), MIST, line=LINE)
+    rrect(s, Inches(0.7), Inches(1.32), Inches(0.16), Inches(1.34), NAVY)
+    txt(s, Inches(1.0), Inches(1.40), Inches(11.3), Inches(0.34),
+        [[("PEOPLE  ·  ", 13, NAVY, True), ("govern, maintain & elevate the AI", 13, SLATE, True)]])
+    roles = [
+        ("Govern & assure", "controls, ethics, sign-off"),
+        ("Manage & maintain AI", "monitor, correct, retrain"),
+        ("Improve AI  ✦", "creativity: models, prompts, logic"),
+        ("Business partnering", "advise, decide, add judgment"),
+    ]
+    rx = Inches(1.0); rw = Inches(2.78); rgap = Inches(0.13)
+    for i,(t,sub) in enumerate(roles):
+        cx = rx + (rw+rgap)*i
+        rrect(s, cx, Inches(1.82), rw, Inches(0.72), NAVY)
+        txt(s, cx+Inches(0.12), Inches(1.88), rw-Inches(0.24), Inches(0.3),
+            [[(t, 11.5, WHITE, True)]])
+        txt(s, cx+Inches(0.12), Inches(2.19), rw-Inches(0.24), Inches(0.3),
+            [[(sub, 9, RGBColor(0xC9,0xD6,0xE4), False)]])
+
+    # ---- feedback loop arrows between people and AI ----
+    dn = shape(s, _MS.DOWN_ARROW, Inches(3.1), Inches(2.72), Inches(0.5), Inches(0.6), STEEL)
+    txt(s, Inches(3.7), Inches(2.80), Inches(3.2), Inches(0.45),
+        [[("Guide · Govern · Improve", 10.5, STEEL, True)]], anchor=MSO_ANCHOR.MIDDLE)
+    up = shape(s, _MS.UP_ARROW, Inches(9.75), Inches(2.72), Inches(0.5), Inches(0.6), TEAL)
+    txt(s, Inches(6.55), Inches(2.80), Inches(3.1), Inches(0.45),
+        [[("Results · Exceptions · Insights", 10.5, TEAL, True)]],
+        align=PP_ALIGN.RIGHT, anchor=MSO_ANCHOR.MIDDLE)
+
+    # ---- AI engine (center) ----
+    rrect(s, Inches(2.3), Inches(3.42), Inches(8.73), Inches(1.12), TEAL)
+    rrect(s, Inches(2.55), Inches(3.66), Inches(0.66), Inches(0.66), NAVY)
+    txt(s, Inches(2.55), Inches(3.75), Inches(0.66), Inches(0.5),
+        [[("AI", 16, WHITE, True)]], align=PP_ALIGN.CENTER)
+    txt(s, Inches(3.45), Inches(3.58), Inches(7.4), Inches(0.5),
+        [[("AUTONOMOUS  AI  FINANCE  ENGINE", 18, WHITE, True)]], anchor=MSO_ANCHOR.MIDDLE)
+    txt(s, Inches(3.45), Inches(4.05), Inches(7.4), Inches(0.42),
+        [[("runs repetitive finance processes end-to-end, 24/7", 12, RGBColor(0xE6,0xF4,0xF1), False)]],
+        anchor=MSO_ANCHOR.MIDDLE)
+
+    # ---- down arrow: executes ----
+    shape(s, _MS.DOWN_ARROW, Inches(6.35), Inches(4.58), Inches(0.62), Inches(0.34), NAVY)
+    txt(s, Inches(7.0), Inches(4.58), Inches(2.0), Inches(0.34),
+        [[("executes", 10.5, NAVY, True)]], anchor=MSO_ANCHOR.MIDDLE)
+
+    # ---- process tiles (bottom) : what AI now does ----
+    tiles = [
+        ("Monthly Close", "auto journals · accruals · consolidation", TEAL),
+        ("Plan & Forecast", "driver-based · rolling · scenarios", STEEL),
+        ("Expense Accruals", "rule + ML estimates, auto-posted", NAVY),
+        ("Reconciliations", "auto-match · flag & explain breaks", TEAL),
+        ("Mgmt Reporting", "auto-generated & narrated", STEEL),
+        ("Anomaly & Controls", "continuous, real-time checks", NAVY),
+    ]
+    tx0 = Inches(0.7); tw = Inches(1.9); tgap = Inches(0.11); ty = Inches(4.98); th = Inches(1.3)
+    step = tw + tgap
+    for i,(t,sub,col) in enumerate(tiles):
+        cx = tx0 + step*i
+        rrect(s, cx, ty, tw, th, WHITE, line=LINE)
+        rect(s, cx, ty, tw, Inches(0.12), col)
+        txt(s, cx+Inches(0.1), ty+Inches(0.24), tw-Inches(0.2), Inches(0.55),
+            [[(t, 11.5, NAVY, True)]], align=PP_ALIGN.CENTER, line_spacing=1.0)
+        txt(s, cx+Inches(0.1), ty+Inches(0.72), tw-Inches(0.2), Inches(0.5),
+            [[(sub, 8.5, SLATE, False)]], align=PP_ALIGN.CENTER, line_spacing=1.0)
+
+    # ---- shift caption ----
+    rect(s, Inches(0.7), Inches(6.42), Inches(11.93), Inches(0.46), NAVY)
+    txt(s, Inches(0.9), Inches(6.48), Inches(11.5), Inches(0.34),
+        [[("The shift:  ", 12, GOLD, True),
+          ("from doing the work  →  to designing, governing and continuously improving the system that does it.",
+           12, WHITE, True)]], anchor=MSO_ANCHOR.MIDDLE)
+
+    notes(s, "This is where I see Finance heading. The autonomous AI engine in the middle runs the repetitive work "
+             "end-to-end — monthly close, planning and forecasting, expense accruals, reconciliations, reporting, and "
+             "continuous controls. People move to the top layer: we govern and assure it, we manage and maintain it, "
+             "and — most importantly — we use creativity to keep improving its performance, while partnering with the "
+             "business. Note the loop: people guide and improve the AI; the AI returns results, exceptions and insights. "
+             "The shift is from doing the work to designing and improving the system that does it.")
 
 
 # =====================================================================
@@ -540,10 +642,15 @@ bullets(s, Inches(0.7), Inches(1.7), Inches(12), Inches(5), items, size=16, gap=
 notes(s, "This role is evolving fast. My response: keep building myself into a T-shaped professional who understands both finance and data, stay close to FP&A automation and AI trends, build lasting partnerships with IT and the business, and use a product mindset to keep iterating the reports — they are always v1, v2, v3, never finished after one delivery.")
 
 # =====================================================================
-# 13) First 90 days + ask
+# 13) Future Vision — AI-run finance
+# =====================================================================
+build_future_vision(add_slide())
+
+# =====================================================================
+# 14) First 90 days + ask
 # =====================================================================
 s = add_slide(); bg(s)
-header(s, "12 · First 90 days", "90-day commitment + the ask", 13)
+header(s, "13 · First 90 days", "90-day commitment + the ask")
 rows = [
     ("30 days", "Situation assessment + a unified KPI data dictionary (entity-confirmed)"),
     ("60 days", "Automate the monthly consolidation; first report Day 4 → Day 2"),
@@ -596,3 +703,14 @@ _PAGE["n"] = 2
 build_roadmap_visual(prs2.slides.add_slide(blank2))
 prs2.save("CFO_Agenda_and_Roadmap_EN.pptx")
 print("Saved: CFO_Agenda_and_Roadmap_EN.pptx  |  slides:", len(prs2.slides._sldIdLst))
+
+# ---------------------------------------------------------------------
+# Also emit a standalone 1-slide file: Future Vision (AI-run finance)
+# ---------------------------------------------------------------------
+prs3 = Presentation()
+prs3.slide_width = Inches(13.333); prs3.slide_height = Inches(7.5)
+blank3 = prs3.slide_layouts[6]
+_PAGE["n"] = 1
+build_future_vision(prs3.slides.add_slide(blank3))
+prs3.save("CFO_Future_Vision_AI_EN.pptx")
+print("Saved: CFO_Future_Vision_AI_EN.pptx  |  slides:", len(prs3.slides._sldIdLst))
